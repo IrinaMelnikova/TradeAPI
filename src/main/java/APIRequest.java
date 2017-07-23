@@ -8,32 +8,49 @@ import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import java.io.*;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 
 public class APIRequest<T> {
 
-    private Class<T> curClass;
-    public APIRequest(Class<T> curClass)
+    private Class<T> resultClass;
+    public APIRequest(Class<T> resultClass)
     {
-        this.curClass = curClass;
+        this.resultClass = resultClass;
     }
     public T makeRequest(String url)  {
+        return convertResponse(doRequest(prepareParams("GET", url)));
+    }
+    private HttpUriRequest prepareParams(String method, String url) {
         try {
-            HttpClient httpClient = HttpClients.createDefault();
-            HttpUriRequest request = RequestBuilder.get().setUri(new URL(url).toURI()).build();
-            HttpResponse response = httpClient.execute(request);
-            ObjectMapper mapper = new ObjectMapper();
-            return mapper.readValue(EntityUtils.toString(response.getEntity()), curClass);
-        } catch (IOException ee) {
-            System.out.println(ee.getMessage());
-            return null;
+            if(method.toUpperCase().equals("POST")) {
+                return RequestBuilder.post().setUri(new URL(url).toURI()).build();
+            } else {
+                return RequestBuilder.get().setUri(new URL(url).toURI()).build();
+            }
         } catch (URISyntaxException ue) {
             System.out.println(ue.getMessage());
-            return null;
-        }
+        } catch (MalformedURLException me) {
+            System.out.println(me.getMessage());
+        } return null;
     }
-
+    private HttpResponse doRequest(HttpUriRequest request) {
+        HttpClient httpClient = HttpClients.createDefault();
+        try {
+            return httpClient.execute(request);
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        } return null;
+    }
+    private T convertResponse(HttpResponse response) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.readValue(EntityUtils.toString(response.getEntity()), resultClass);
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        } return null;
+    }
     public static void main(String[] args) {
         Currency eutherum = new Currency();
         APIRequest<Currency> request = new APIRequest<Currency>(Currency.class);
